@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O‘zbek Tilida Kino Qidiruv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e2a44 0%, #2a4066 100%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            animation: fadeIn 1s ease-in;
+        }
+        input[type="text"] {
+            padding: 12px;
+            width: 300px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        input[type="text"]::placeholder {
+            color: #ccc;
+        }
+        input[type="text"]:focus {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+        }
+        select {
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            outline: none;
+        }
+        select option {
+            background: #2a4066;
+            color: #fff;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        .movie-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        .movie-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .movie-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+        }
+        .movie-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .movie-card h3 {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+        .movie-card p {
+            font-size: 0.9em;
+            margin: 5px 0;
+            color: #ddd;
+        }
+        .movie-card a {
+            color: #00b7ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .movie-card a:hover {
+            text-decoration: underline;
+        }
+        .error {
+            color: #ff4d4d;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(255, 0, 0, 0.1);
+            border-radius: 8px;
+            animation: fadeIn 1s ease-in;
+        }
+        .loading {
+            color: #00b7ff;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            animation: pulse 1.5s infinite;
+        }
+        .pagination {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px 20px;
+            background: #007bff;
+            border-radius: 5px;
+        }
+        .pagination button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="movieSearch" placeholder="Kino nomini o‘zbekcha kiriting (masalan, Shazam)">
+        <select id="yearFilter">
+            <option value="">Yilni tanlang</option>
+            <option value="2020-2025">2020-2025</option>
+            <option value="2010-2019">2010-2019</option>
+            <option value="2000-2009">2000-2009</option>
+            <option value="1990-1999">1990-1999</option>
+        </select>
+        <button onclick="searchMovie(1)">Qidirish</button>
+        <button onclick="clearSearch()">Tozalash</button>
+    </div>
+    <div id="movieResult" class="movie-container"></div>
+    <div id="pagination" class="pagination"></div>
+
+    <script>
+        let currentPage = 1;
+        let totalResults = 0;
+        const resultsPerPage = 10;
+
+        // O‘zbek tilidagi kino nomini tozalash va moslashtirish
+        function cleanSearchQuery(query) {
+            // Oddiy tozalash: kichik harflarga o‘tkazish va keraksiz so‘zlarni olib tashlash
+            query = query.toLowerCase().trim();
+            // O‘zbek tilidagi umumiy so‘zlarni olib tashlash
+            const stopWords = ['film', 'kino', 'superqahramon', 'qahramon', 'haqida'];
+            return query
+                .split(' ')
+                .filter(word => !stopWords.includes(word))
+                .join(' ');
+        }
+
+        async function searchMovie(page = 1) {
+            const apiKey = '70940727'; // Yangi faollashtirilgan API kalitingizni shu yerga qo‘ying
+            const searchInput = document.getElementById('movieSearch').value;
+            const yearFilter = document.getElementById('yearFilter').value;
+            const resultDiv = document.getElementById('movieResult');
+            const paginationDiv = document.getElementById('pagination');
+
+            if (!searchInput) {
+                resultDiv.innerHTML = '<p class="error">Iltimos, kino nomini kiriting!</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="loading">Yuklanmoqda...</p>';
+            paginationDiv.innerHTML = '';
+
+            try {
+                // O‘zbek tilidagi so‘rovni tozalash
+                const cleanedQuery = cleanSearchQuery(searchInput);
+                const cacheKey = `${cleanedQuery}_${yearFilter}_${page}`;
+                const cachedData = localStorage.getItem(cacheKey);
+                let data;
+
+                if (cachedData) {
+                    data = JSON.parse(cachedData);
+                } else {
+                    const response = await fetch(`http://www.omdbapi.com/?s=${encodeURIComponent(cleanedQuery)}&page=${page}&apikey=${apiKey}`);
+                    data = await response.json();
+                    localStorage.setItem(cacheKey, JSON.stringify(data));
+                }
+
+                if (data.Response === "True") {
+                    totalResults = parseInt(data.totalResults);
+                    resultDiv.innerHTML = '';
+
+                    // Yil filtri qo‘llash
+                    const [startYear, endYear] = yearFilter ? yearFilter.split('-').map(Number) : [0, Infinity];
+
+                    for (const movie of data.Search) {
+                        const movieYear = parseInt(movie.Year);
+                        if (movieYear >= startYear && movieYear <= endYear) {
+                            const detailResponse = await fetch(`http://www.omdbapi.com/?i=${movie.imdbID}&apikey=${apiKey}`);
+                            const detailData = await detailResponse.json();
+
+                            if (detailData.Response === "True") {
+                                resultDiv.innerHTML += `
+                                    <div class="movie-card">
+                                        <img src="${detailData.Poster !== 'N/A' ? detailData.Poster : 'https://via.placeholder.com/300x450?text=Rasm+Yok'}" alt="${detailData.Title}">
+                                        <h3>${detailData.Title}</h3>
+                                        <p><strong>Rejissyor:</strong> ${detailData.Director}</p>
+                                        <p><strong>Chiqish yili:</strong> ${detailData.Year}</p>
+                                        <p><strong>Janr:</strong> ${detailData.Genre}</p>
+                                        <p><strong>Aktyorlar:</strong> ${detailData.Actors}</p>
+                                        <p><strong>IMDb reytingi:</strong> ${detailData.imdbRating}/10</p>
+                                        <p><strong>Syujet:</strong> ${detailData.Plot.slice(0, 100)}...</p>
+                                        <p><a href="https://www.imdb.com/title/${detailData.imdbID}" target="_blank">IMDb’da ko‘rish</a></p>
+                                    </div>
+                                `;
+                            }
+                        }
+                    }
+
+                    if (resultDiv.innerHTML === '') {
+                        resultDiv.innerHTML = '<p class="error">Tanlangan yil oralig‘ida kino topilmadi!</p>';
+                    }
+
+                    // Sahifalash tugmalari
+                    const totalPages = Math.ceil(totalResults / resultsPerPage);
+                    if (totalPages > 1) {
+                        paginationDiv.innerHTML = `
+                            <button onclick="searchMovie(${page - 1})" ${page === 1 ? 'disabled' : ''}>Oldingi</button>
+                            <span>Sahifa ${page} / ${totalPages}</span>
+                            <button onclick="searchMovie(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Keyingi</button>
+                        `;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<p class="error">Kino topilmadi: ${data.Error}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<p class="error">Xatolik yuz berdi. Internet aloqangizni tekshiring yoki qayta urinib ko‘ring!</p>';
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('movieSearch').value = '';
+            document.getElementById('yearFilter').value = '';
+            document.getElementById('movieResult').innerHTML = '';
+            document.getElementById('pagination').innerHTML = '';
+            currentPage = 1;
+        }
+
+        // Enter tugmasi bilan qidirish
+        document.getElementById('movieSearch').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                searchMovie(1);
+            }
+        });
+    </script>
+</body>
+</html>
