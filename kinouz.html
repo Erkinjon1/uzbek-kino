@@ -6,6 +6,8 @@
     <title>O'zbek va Xalqaro Kinolarni Qidirish</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- i18next CDN -->
+    <script src="https://unpkg.com/i18next@21.6.16/dist/umd/i18next.min.js"></script>
     <style>
         :root {
             --primary-color: #2563eb;
@@ -328,40 +330,45 @@
     </style>
 </head>
 <body>
+    <div style="text-align:right; margin-bottom:1rem;">
+      <select id="langSelect">
+        <option value="uz">O'zbekcha</option>
+        <option value="ru">Русский</option>
+        <option value="en">English</option>
+      </select>
+    </div>
     <div class="container">
         <header class="header">
-            <h1>O'zbek va Xalqaro Kinolarni Qidirish</h1>
-            <p>Sevimli filmlaringizni toping va yangi kinolarni kashf eting</p>
+            <h1 data-i18n="title"></h1>
+            <p data-i18n="subtitle"></p>
         </header>
 
         <div class="search-container">
             <div class="search-box">
-                <input type="text" id="movieSearch" placeholder="Kino nomini o'zbekcha kiriting...">
+                <input type="text" id="movieSearch" data-i18n="[placeholder]searchPlaceholder">
                 <i class="fas fa-search"></i>
             </div>
             <div class="filter-group">
                 <select id="yearFilter">
-                    <option value="">Yilni tanlang</option>
+                    <option value="" data-i18n="year"></option>
                     <option value="2020-2025">2020-2025</option>
                     <option value="2010-2019">2010-2019</option>
                     <option value="2000-2009">2000-2009</option>
                     <option value="1990-1999">1990-1999</option>
                 </select>
                 <select id="genreFilter">
-                    <option value="">Janrni tanlang</option>
-                    <option value="drama">Drama</option>
-                    <option value="comedy">Komediya</option>
-                    <option value="action">Jangari</option>
-                    <option value="romance">Romantik</option>
+                    <option value="" data-i18n="genre"></option>
+                    <option value="drama" data-i18n="genreDrama"></option>
+                    <option value="comedy" data-i18n="genreComedy"></option>
+                    <option value="action" data-i18n="genreAction"></option>
+                    <option value="romance" data-i18n="genreRomance"></option>
                 </select>
             </div>
-            <button class="btn btn-primary" onclick="searchMovie(1)">
-                <i class="fas fa-search"></i>
-                Qidirish
+            <button class="btn btn-primary" onclick="searchMovie(1)" data-i18n="search">
+                <i class="fas fa-search"></i> <span data-i18n="search"></span>
             </button>
-            <button class="btn btn-secondary" onclick="clearSearch()">
-                <i class="fas fa-times"></i>
-                Tozalash
+            <button class="btn btn-secondary" onclick="clearSearch()" data-i18n="clear">
+                <i class="fas fa-times"></i> <span data-i18n="clear"></span>
             </button>
         </div>
 
@@ -499,6 +506,83 @@
             10752: "Urush",
             37: "Vestern"
         };
+
+        // i18next initialization
+        i18next.init({
+          lng: 'uz',
+          resources: {
+            uz: {
+              translation: {
+                title: "O'zbek va Xalqaro Kinolarni Qidirish",
+                subtitle: "Sevimli filmlaringizni toping va yangi kinolarni kashf eting",
+                searchPlaceholder: "Kino nomini o'zbekcha kiriting...",
+                year: "Yilni tanlang",
+                genre: "Janrni tanlang",
+                genreDrama: "Drama",
+                genreComedy: "Komediya",
+                genreAction: "Jangari",
+                genreRomance: "Romantik",
+                search: "Qidirish",
+                clear: "Tozalash"
+              }
+            },
+            ru: {
+              translation: {
+                title: "Поиск узбекских и зарубежных фильмов",
+                subtitle: "Найдите свои любимые фильмы и откройте новые",
+                searchPlaceholder: "Введите название фильма на русском...",
+                year: "Выберите год",
+                genre: "Выберите жанр",
+                genreDrama: "Драма",
+                genreComedy: "Комедия",
+                genreAction: "Боевик",
+                genreRomance: "Романтика",
+                search: "Поиск",
+                clear: "Очистить"
+              }
+            },
+            en: {
+              translation: {
+                title: "Search Uzbek and International Movies",
+                subtitle: "Find your favorite movies and discover new ones",
+                searchPlaceholder: "Enter movie name in English...",
+                year: "Select year",
+                genre: "Select genre",
+                genreDrama: "Drama",
+                genreComedy: "Comedy",
+                genreAction: "Action",
+                genreRomance: "Romance",
+                search: "Search",
+                clear: "Clear"
+              }
+            }
+          }
+        }, function(err, t) {
+          updateContent();
+        });
+
+        function updateContent() {
+          document.querySelectorAll('[data-i18n]').forEach(function(elem) {
+            const key = elem.getAttribute('data-i18n');
+            if (key.startsWith('[')) {
+              // Attribute translation, e.g. [placeholder]searchPlaceholder
+              const matches = key.match(/^\[(\w+)\](.+)$/);
+              if (matches) {
+                elem.setAttribute(matches[1], i18next.t(matches[2]));
+              }
+            } else {
+              elem.innerHTML = i18next.t(key);
+            }
+          });
+        }
+
+        document.getElementById('langSelect').addEventListener('change', function() {
+          i18next.changeLanguage(this.value, updateContent);
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+          updateContent();
+        });
 
         // Translation function
         async function translateToUzbek(text) {
